@@ -1,24 +1,12 @@
 // @flow
 
-if (window.YT_ok) {
-    alert('reload');
-    window.reload();
-}
-
 export default function get(): any {
-    if (!window.YT_ok) {
-        throw new Error('Youtube not ready yet');
-    }
     return window.YT;
 };
 
 let onLoadCallbacks = [];
 
 window.onYouTubeIframeAPIReady = function() {
-    window.YT_ok = true;
-
-    console.log('YT LOADED', onLoadCallbacks);
-
     if (onLoadCallbacks) {
         for (let callback of onLoadCallbacks) {
             callback();
@@ -29,7 +17,7 @@ window.onYouTubeIframeAPIReady = function() {
 };
 
 export function onLoad(callback: Function) {
-    if (window.YT_ok) {
+    if (window.YT) {
         callback();
     } else if (onLoadCallbacks) {
         onLoadCallbacks.push(callback);

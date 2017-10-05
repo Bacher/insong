@@ -27,8 +27,6 @@ class Player extends Component<Props, State> {
     constructor(props: Props) {
         super(props);
 
-        const a = 5;
-
         _.bindAll(this, [
             '_onPlayerRef',
         ]);
@@ -45,7 +43,7 @@ class Player extends Component<Props, State> {
 
     _onPlayerRef(el: any) {
         if (el) {
-            this._youtubePlayer = new window.YT.Player('player', {
+            window.ppp = this._youtubePlayer = new window.YT.Player('player', {
                 width:      '640',
                 height:     '360',
                 videoId:    '253vLj037K4',
@@ -60,6 +58,8 @@ class Player extends Component<Props, State> {
                 },
                 playerVars: OPTIONS,
             });
+        } else {
+            this._youtubePlayer.destroy();
         }
     }
 
