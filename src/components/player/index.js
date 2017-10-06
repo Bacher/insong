@@ -20,7 +20,7 @@ const OPTIONS = {
     rel:            0,
 };
 
-class Player extends Component<Props, State> {
+export default class Player extends Component<Props, State> {
 
     _youtubePlayer: any;
 
@@ -35,15 +35,14 @@ class Player extends Component<Props, State> {
     render() {
         return (
             <div className="b-player">
-                PLAYER:
-                <div id="player" ref={this._onPlayerRef} />
+                <div ref={this._onPlayerRef} />
             </div>
         );
     }
 
     _onPlayerRef(el: any) {
         if (el) {
-            window.ppp = this._youtubePlayer = new window.YT.Player('player', {
+            window.ppp = this._youtubePlayer = new window.YT.Player(el, {
                 width:      '640',
                 height:     '360',
                 videoId:    '253vLj037K4',
@@ -64,5 +63,3 @@ class Player extends Component<Props, State> {
     }
 
 }
-
-export default Player;

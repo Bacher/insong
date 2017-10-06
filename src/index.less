@@ -1,8 +1,15 @@
-body {
+
+BODY {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
+  box-sizing: border-box;
+}
+
+*, *:after, *:before {
+  box-sizing: inherit;
 }
 
 @import 'components/app/index.less';
 @import 'components/player/index.less';
+@import 'components/track-parts/index.less';

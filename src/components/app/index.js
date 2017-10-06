@@ -1,13 +1,16 @@
+// @flow
+
 import React, { Component } from 'react';
 import _ from 'lodash';
 import Player from '../player';
+import TrackParts from '../track-parts';
 import { onLoad } from '../../youtube';
 
 type State = {|
     isYTLoaded: boolean,
 |}
 
-class App extends Component<any, State> {
+export default class App extends Component<any, State> {
 
     constructor(props: any) {
         super(props);
@@ -28,11 +31,22 @@ class App extends Component<any, State> {
     render() {
         const { isYTLoaded } = this.state;
 
-        return (
-            <div>
-                {isYTLoaded ? <Player /> : null}
-            </div>
-        );
+        if (isYTLoaded) {
+            return (
+                <div className="b-app">
+                    <div className="b-app__side">
+                        <TrackParts />
+                    </div>
+                    <div className="b-app__side">
+                        <Player />
+                    </div>
+                </div>
+            );
+        } else {
+            return (
+                <div className="b-app" />
+            );
+        }
     }
 
     _onYoutubeLoaded() {
@@ -42,5 +56,3 @@ class App extends Component<any, State> {
     }
 
 }
-
-export default App;

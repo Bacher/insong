@@ -1,9 +1,5 @@
 // @flow
 
-export default function get(): any {
-    return window.YT;
-};
-
 let onLoadCallbacks = [];
 
 window.onYouTubeIframeAPIReady = function() {
@@ -17,11 +13,11 @@ window.onYouTubeIframeAPIReady = function() {
 };
 
 export function onLoad(callback: Function) {
-    if (window.YT) {
+    if (window.YT && window.YT.Player) {
         callback();
     } else if (onLoadCallbacks) {
         onLoadCallbacks.push(callback);
     } else {
-        throw 1;
+        throw new Error();
     }
 }
