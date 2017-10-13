@@ -39,6 +39,8 @@ export default class TrackParts extends Component<any, State> {
             repeat:   store.get('repeat', false),
         };
 
+        console.log(this.state.items);
+
         _.bindAll(this, [
             '_onItemClick',
             '_onRepeatChange',
@@ -47,18 +49,23 @@ export default class TrackParts extends Component<any, State> {
             '_onEndCaptureClick',
             '_onResetCaptureClick',
             '_onPauseClick',
+            '_onKeyDown',
         ]);
     }
 
-    componentWillMount() {
+    componentDidMount() {
         this._interval(Infinity, 100, 'duration', () => {
             if (this.refs.duration && window.ppp && window.ppp.getCurrentTime) {
                 this.refs.duration.innerHTML = time(window.ppp.getCurrentTime());
             }
         });
+
+        (document.body: any).addEventListener('keydown', this._onKeyDown);
     }
 
     componentWillUnmount() {
+        (document.body: any).removeEventListener('keydown', this._onKeyDown);
+
         this._stopPlayerOperations();
         this._clearI('duration');
     }
@@ -178,7 +185,7 @@ export default class TrackParts extends Component<any, State> {
 
     _onResetCaptureClick() {
         this.setState({
-            capture: true,
+            capture: false,
         });
     }
 
@@ -200,7 +207,7 @@ export default class TrackParts extends Component<any, State> {
                 this._interval(10, 50, 'i3', i => {
                     player.setVolume(i * 10);
                 }, () => {
-                    this._timeout(interval, 'i3', () => {
+                    this._timeout(Math.max(0, interval - 100), 'i3', () => {
                         this._interval(10, 50, 'i3', i => {
                             player.setVolume(100 - i * 10);
                         }, () => {
@@ -274,6 +281,20 @@ export default class TrackParts extends Component<any, State> {
             isClear = true;
             clearInterval(intervalId);
             store.i.delete(intervalId);
+        }
+    }
+
+    _onKeyDown(e: KeyboardEvent) {
+        if (e.which === 32) {
+            if (window.ppp) {
+                console.log(window.ppp.getCurrentTime());
+
+                if (this.state.capture) {
+                    this._onEndCaptureClick();
+                } else {
+                    this._onStartCaptureClick();
+                }
+            }
         }
     }
 
