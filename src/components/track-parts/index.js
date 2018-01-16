@@ -4,6 +4,7 @@ import React, { Component } from 'react';
 import _ from 'lodash';
 import cn from 'classnames'
 import store from '../../storage';
+import TimeLine from '../timeline';
 
 type TimeInterval = {|
     start: number,
@@ -81,6 +82,7 @@ export default class TrackParts extends Component<any, State> {
                             'b-track-parts__item_active': i === selected,
                         })} data-id={i} onClick={this._onItemClick}>
                             {item.title} ({time(item.time.start)} - {time(item.time.end)})
+                            <i className="b-track-parts__item-remove" onClick={e => this._onRemoveItem(e, i)}>x</i>
                         </div>
                     ))}
                 </div>
@@ -96,13 +98,15 @@ export default class TrackParts extends Component<any, State> {
                     <button type="button" disabled={!capture} onClick={this._onResetCaptureClick}>Reset capture</button>
                     <div ref="duration">0:00</div>
                 </div>
+                <TimeLine />
             </div>
         );
     }
 
-    _onItemClick(e: MouseEvent) {
+    _onItemClick(e: MouseEvent, _index) {
+        const index = _index == null ? Number((e: any).currentTarget.dataset.id) : _index;
+
         const { items } = this.state;
-        const index     = Number((e: any).currentTarget.dataset.id);
         const item      = items[index];
 
         this.setState({
@@ -113,10 +117,36 @@ export default class TrackParts extends Component<any, State> {
         this._repeat(item.time.start, Math.round((item.time.end - item.time.start) * 1000));
     }
 
-    _onRepeatChange(e: Event) {
-        const checked = (e.currentTarget: any).checked;
+    _onRemoveItem(e, i) {
+        if (e) {
+            e.stopPropagation();
+        }
+        const { items, selected } = this.state;
+
+        items.splice(i, 1);
+
+        if (selected === i && selected === items.length) {
+            let newSel = selected - 1;
+
+            if (newSel < 0) {
+                newSel = null;
+            }
+
+            this.setState({
+                selected: newSel,
+            });
+        } else {
+            this.forceUpdate();
+        }
+
+        store.set('parts', this.state.items);
+    }
+
+    _onRepeatChange() {
+        const checked = !this.state.repeat;
 
         store.set('repeat', checked);
+
         this.setState({
             repeat: checked,
         });
@@ -163,7 +193,8 @@ export default class TrackParts extends Component<any, State> {
         this._startCaptureTime = window.ppp.getCurrentTime();
 
         this.setState({
-            capture: true,
+            selected: null,
+            capture:  true,
         });
     }
 
@@ -179,7 +210,8 @@ export default class TrackParts extends Component<any, State> {
         store.set('parts', this.state.items);
 
         this.setState({
-            capture: false,
+            capture:  false,
+            selected: this.state.items.length - 1,
         });
     }
 
@@ -195,6 +227,8 @@ export default class TrackParts extends Component<any, State> {
         player.playVideo();
         let prevTime = player.getCurrentTime();
 
+        const end = start + interval / 1000;
+
         this._interval(Infinity, 10, 'i3', (i, clear) => {
             const currentTime = player.getCurrentTime();
 
@@ -204,10 +238,13 @@ export default class TrackParts extends Component<any, State> {
             } else if (currentTime !== prevTime) {
                 clear();
 
-                this._interval(10, 50, 'i3', i => {
-                    player.setVolume(i * 10);
-                }, () => {
-                    this._timeout(Math.max(0, interval - 100), 'i3', () => {
+                this._interval(Infinity, 50, 'i3', () => {
+                    const time = player.getCurrentTime();
+                    const delta = time - end;
+
+                    if (delta > -0.05 && delta < 0.1) {
+                        this._clearI('i3');
+
                         this._interval(10, 50, 'i3', i => {
                             player.setVolume(100 - i * 10);
                         }, () => {
@@ -221,7 +258,11 @@ export default class TrackParts extends Component<any, State> {
                                 });
                             }
                         });
-                    });
+                    }
+                });
+
+                this._interval(10, 50, 'i3', i => {
+                    player.setVolume(i * 10);
                 });
             }
         });
@@ -285,17 +326,105 @@ export default class TrackParts extends Component<any, State> {
     }
 
     _onKeyDown(e: KeyboardEvent) {
-        if (e.which === 32) {
-            if (window.ppp) {
-                console.log(window.ppp.getCurrentTime());
+        if (!window.ppp) {
+            return;
+        }
 
+        switch (e.which) {
+            case 32: // space
+                //this._onStartCaptureClick();
+                if (window.ppp.getPlayerState() === 1) {
+                    this._onPauseClick();
+                } else if (this.state.selected != null) {
+                    this._onItemClick(null, this.state.selected);
+                } else {
+                    this._onPlayEntireClick();
+                }
+                break;
+            case 37:
+                this._seek(2 * (e.altKey ? 0.5 : e.shiftKey ? 5 : 1));
+                break;
+            case 39:
+                this._seek(-2 * (e.altKey ? 0.5 : e.shiftKey ? 5 : 1));
+                break;
+            case 38: // up
+                this._selectPrev();
+                break;
+            case 40: // up
+                this._selectNext();
+                break;
+            case 8: // backspace
+                if (this.state.selected != null && window.confirm('Are you sure?')) {
+                    this._onRemoveItem(null, this.state.selected);
+                }
+                break;
+            case 49: // 1
                 if (this.state.capture) {
                     this._onEndCaptureClick();
                 } else {
                     this._onStartCaptureClick();
                 }
+                break;
+            case 82: // r
+                this._onRepeatChange();
+                break;
+        }
+
+        console.log(e.which);
+    }
+
+    _seek(sec) {
+        const player = window.ppp;
+
+        if (player.getPlayerState() !== 1) {
+            return;
+        }
+
+        player.seekTo(player.getCurrentTime() - sec);
+    }
+
+    _selectPrev() {
+        const { items, selected } = this.state;
+
+        let newSel;
+
+        if (items) {
+            if (selected == null) {
+                newSel = 0;
+            } else {
+                newSel = selected - 1;
+
+                if (newSel < 0) {
+                    newSel = items.length - 1;
+                }
             }
         }
+
+        this.setState({
+            selected: newSel,
+        });
+    }
+
+    _selectNext() {
+        const { items, selected } = this.state;
+
+        let newSel;
+
+        if (items) {
+            if (selected == null) {
+                newSel = 0;
+            } else {
+                newSel = selected + 1;
+
+                if (newSel >= items.length) {
+                    newSel = 0;
+                }
+            }
+        }
+
+        this.setState({
+            selected: newSel,
+        });
     }
 
 }

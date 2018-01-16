@@ -3,9 +3,26 @@
   width: 300px;
 
   &__item {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
 
     &_active {
       font-weight: bold;
+    }
+  }
+
+  &__item-remove {
+    position: absolute;
+    right: 3px;
+    width: 10px;
+    height: 10px;
+    color: #888;
+    cursor: pointer;
+    font-style: normal;
+
+    &:hover {
+      color: #000;
     }
   }
 }
