@@ -17,6 +17,7 @@ type PartInfo = {|
 |}
 
 type State = {|
+    duration: number,
     items: Array<PartInfo>,
     selected: ?number,
     repeat: boolean,
@@ -34,6 +35,7 @@ export default class TrackParts extends Component<any, State> {
         this._i = new Map();
 
         this.state = {
+            duration: 0,
             items:    store.get('parts') || [],
             selected: null,
             capture:  false,
@@ -62,6 +64,18 @@ export default class TrackParts extends Component<any, State> {
         });
 
         (document.body: any).addEventListener('keydown', this._onKeyDown);
+
+        this._getDuration();
+    }
+
+    _getDuration() {
+        if (window.ppp && window.ppp.getDuration) {
+            this.setState({
+                duration: window.ppp.getDuration(),
+            });
+        } else {
+            setTimeout(() => this._getDuration(), 10);
+        }
     }
 
     componentWillUnmount() {
@@ -72,7 +86,13 @@ export default class TrackParts extends Component<any, State> {
     }
 
     render() {
-        const { items, repeat, capture, selected } = this.state;
+        const { duration, items, repeat, capture, selected } = this.state;
+
+        let range = null;
+
+        if (selected != null && duration) {
+            range = items[selected].time;
+        }
 
         return (
             <div className="b-track-parts">
@@ -98,7 +118,7 @@ export default class TrackParts extends Component<any, State> {
                     <button type="button" disabled={!capture} onClick={this._onResetCaptureClick}>Reset capture</button>
                     <div ref="duration">0:00</div>
                 </div>
-                <TimeLine />
+                <TimeLine range={range} duration={duration} />
             </div>
         );
     }
