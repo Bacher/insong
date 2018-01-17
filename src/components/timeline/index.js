@@ -8,6 +8,7 @@ type Props = {|
         start: number,
         end: number,
     |},
+    time: number,
     duration: number,
 |}
 
@@ -19,15 +20,12 @@ export default class App extends Component<Props, State> {
     constructor(props: any) {
         super(props);
 
-        this.state = {
-        };
-
         _.bindAll(this, [
         ]);
     }
 
     render() {
-        const { range, duration } = this.props;
+        const { time, range, duration } = this.props;
 
         let inner = null;
 
@@ -49,6 +47,7 @@ export default class App extends Component<Props, State> {
             <div className="b-timeline">
                 <div className="b-timeline__body" />
                 {inner}
+                <div className="b-timeline__position" style={{ left: `${duration ? time * 100 / duration : 0}%` }} />
                 <div className="b-timeline__times">
                     {!duration ? null : _.times(Math.floor(duration / 60) + 1, i => (
                         <div

@@ -17,6 +17,7 @@ type PartInfo = {|
 |}
 
 type State = {|
+    time: number,
     duration: number,
     items: Array<PartInfo>,
     selected: ?number,
@@ -34,10 +35,13 @@ export default class TrackParts extends Component<any, State> {
 
         this._i = new Map();
 
+        const items = store.get('parts') || [];
+
         this.state = {
+            time:     0,
             duration: 0,
-            items:    store.get('parts') || [],
-            selected: null,
+            items:    items,
+            selected: items.length ? 0 : null,
             capture:  false,
             repeat:   store.get('repeat', false),
         };
@@ -58,8 +62,10 @@ export default class TrackParts extends Component<any, State> {
 
     componentDidMount() {
         this._interval(Infinity, 100, 'duration', () => {
-            if (this.refs.duration && window.ppp && window.ppp.getCurrentTime) {
-                this.refs.duration.innerHTML = time(window.ppp.getCurrentTime());
+            if (window.ppp && window.ppp.getCurrentTime) {
+                this.setState({
+                    time: window.ppp.getCurrentTime(),
+                });
             }
         });
 
@@ -86,7 +92,7 @@ export default class TrackParts extends Component<any, State> {
     }
 
     render() {
-        const { duration, items, repeat, capture, selected } = this.state;
+        const { time, duration, items, repeat, capture, selected } = this.state;
 
         let range = null;
 
@@ -101,29 +107,42 @@ export default class TrackParts extends Component<any, State> {
                         <div key={i} className={cn('b-track-parts__item', {
                             'b-track-parts__item_active': i === selected,
                         })} data-id={i} onClick={this._onItemClick}>
-                            {item.title} ({time(item.time.start)} - {time(item.time.end)})
+                            {item.title} ({toTime(item.time.start)} - {toTime(item.time.end)})
                             <i className="b-track-parts__item-remove" onClick={e => this._onRemoveItem(e, i)}>x</i>
                         </div>
                     ))}
                 </div>
                 <div className="b-track-parts__controls">
-                    <label>
-                        <input type="checkbox" checked={repeat} onChange={this._onRepeatChange} />
-                        repeat
-                    </label>
-                    <button type="button" onClick={this._onPlayEntireClick}>Play entire</button>
-                    <button type="button" onClick={this._onPauseClick}>Pause</button>
-                    <button type="button" disabled={capture} onClick={this._onStartCaptureClick}>Start capture</button>
-                    <button type="button" disabled={!capture} onClick={this._onEndCaptureClick}>End capture</button>
-                    <button type="button" disabled={!capture} onClick={this._onResetCaptureClick}>Reset capture</button>
-                    <div ref="duration">0:00</div>
+                    <button type="button" className="b-track-parts__btn" title="Repeat" onClick={this._onRepeatChange}>
+                        <i className={cn('fa fa-repeat', {
+                            'b-track-parts__repeat_active': repeat,
+                        })} />
+                    </button>
+                    <button type="button" className="b-track-parts__btn" title="Entire play" onClick={this._onPlayEntireClick}>
+                        <i className="fa fa-youtube-play" />
+                    </button>
+                    <button type="button" className="b-track-parts__btn" title="Pause" onClick={this._onPauseClick}>
+                        <i className="fa fa-pause" />
+                    </button>
+                    <button type="button" className="b-track-parts__btn" title={capture ? 'Stop' : 'Start capture'} onClick={capture ? this._onEndCaptureClick : this._onStartCaptureClick}>
+                        <i className={cn('fa fa-circle', {
+                            'b-track-parts__capture_active': capture,
+                        })} />
+                    </button>
+                    {capture ?
+                        <button type="button" className="b-track-parts__btn" title="Reset capture" onClick={this._onResetCaptureClick}>
+                            <i className="fa fa-ban" />
+                        </button>
+                        : null
+                    }
+                    <div>{toTime(time)}</div>
                 </div>
-                <TimeLine range={range} duration={duration} />
+                <TimeLine range={range} time={time} duration={duration} />
             </div>
         );
     }
 
-    _onItemClick(e: MouseEvent, _index) {
+    _onItemClick(e: ?MouseEvent, _index?: ?number) {
         const index = _index == null ? Number((e: any).currentTarget.dataset.id) : _index;
 
         const { items } = this.state;
@@ -137,7 +156,7 @@ export default class TrackParts extends Component<any, State> {
         this._repeat(item.time.start, Math.round((item.time.end - item.time.start) * 1000));
     }
 
-    _onRemoveItem(e, i) {
+    _onRemoveItem(e: any, i: number) {
         if (e) {
             e.stopPropagation();
         }
@@ -145,7 +164,7 @@ export default class TrackParts extends Component<any, State> {
 
         items.splice(i, 1);
 
-        if (selected === i && selected === items.length) {
+        if (selected != null && selected === i && selected === items.length) {
             let newSel = selected - 1;
 
             if (newSel < 0) {
@@ -388,12 +407,14 @@ export default class TrackParts extends Component<any, State> {
             case 82: // r
                 this._onRepeatChange();
                 break;
+            default:
+                // fallback
         }
 
         console.log(e.which);
     }
 
-    _seek(sec) {
+    _seek(sec: number) {
         const player = window.ppp;
 
         if (player.getPlayerState() !== 1) {
@@ -449,7 +470,7 @@ export default class TrackParts extends Component<any, State> {
 
 }
 
-function time(_seconds) {
+function toTime(_seconds) {
     const seconds = Math.round(_seconds);
 
     return Math.floor(seconds / 60) + ':' + nn(seconds % 60);
