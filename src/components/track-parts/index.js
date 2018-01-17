@@ -21,8 +21,12 @@ type State = {|
     duration: number,
     items: Array<PartInfo>,
     selected: ?number,
+    hover: ?number,
     repeat: boolean,
     capture: boolean,
+
+    invalidStartTime: boolean,
+    invalidEndTime: boolean,
 |}
 
 export default class TrackParts extends Component<any, State> {
@@ -42,11 +46,13 @@ export default class TrackParts extends Component<any, State> {
             duration: 0,
             items:    items,
             selected: items.length ? 0 : null,
+            hover:    null,
             capture:  false,
             repeat:   store.get('repeat', false),
-        };
 
-        console.log(this.state.items);
+            invalidStartTime: false,
+            invalidEndTime:   false,
+        };
 
         _.bindAll(this, [
             '_onItemClick',
@@ -57,6 +63,10 @@ export default class TrackParts extends Component<any, State> {
             '_onResetCaptureClick',
             '_onPauseClick',
             '_onKeyDown',
+            '_onHoverRange',
+            '_onClickRange',
+            '_onTimeStartChange',
+            '_onTimeEndChange',
         ]);
     }
 
@@ -94,11 +104,7 @@ export default class TrackParts extends Component<any, State> {
     render() {
         const { time, duration, items, repeat, capture, selected } = this.state;
 
-        let range = null;
-
-        if (selected != null && duration) {
-            range = items[selected].time;
-        }
+        const track = selected != null ? items[selected] : null;
 
         return (
             <div className="b-track-parts">
@@ -137,9 +143,35 @@ export default class TrackParts extends Component<any, State> {
                     }
                     <div>{toTime(time)}</div>
                 </div>
-                <TimeLine range={range} time={time} duration={duration} />
+                {track ?
+                    <div className="b-track-parts__current-track">
+                        <div>{track.title}</div>
+                        <input className="b-track-parts__track-time" value={toTimeMs(track.time.start)} onChange={this._onTimeStartChange} />
+                        {' - '}
+                        <input className="b-track-parts__track-time" value={toTimeMs(track.time.end)} onChange={this._onTimeEndChange} />
+                    </div>
+                    : null
+                }
+                <TimeLine
+                    items={items.map(item => item.time)}
+                    selected={selected}
+                    time={time}
+                    duration={duration}
+                    onHover={this._onHoverRange}
+                    onClick={this._onClickRange}
+                />
             </div>
         );
+    }
+
+    _onHoverRange(i: ?number) {
+        this.setState({ hover: i });
+    }
+
+    _onClickRange(i: number) {
+        //if (i !== this.state.selected) {
+        this._onItemClick(null, i);
+        //}
     }
 
     _onItemClick(e: ?MouseEvent, _index?: ?number) {
@@ -160,6 +192,7 @@ export default class TrackParts extends Component<any, State> {
         if (e) {
             e.stopPropagation();
         }
+
         const { items, selected } = this.state;
 
         items.splice(i, 1);
@@ -248,9 +281,17 @@ export default class TrackParts extends Component<any, State> {
 
         store.set('parts', this.state.items);
 
+        const newSel = this.state.items.length - 1;
+
         this.setState({
             capture:  false,
-            selected: this.state.items.length - 1,
+            selected: newSel,
+        });
+
+        this._interval(10, 50, 'i3', i => {
+            window.ppp.setVolume(100 - i * 10);
+        }, () => {
+            this._onItemClick(null, newSel);
         });
     }
 
@@ -260,13 +301,11 @@ export default class TrackParts extends Component<any, State> {
         });
     }
 
-    _repeat(start: number, interval: number) {
+    _repeat(start: number) {
         const player = window.ppp;
         player.seekTo(start - 0.1);
         player.playVideo();
         let prevTime = player.getCurrentTime();
-
-        const end = start + interval / 1000;
 
         this._interval(Infinity, 10, 'i3', (i, clear) => {
             const currentTime = player.getCurrentTime();
@@ -279,7 +318,8 @@ export default class TrackParts extends Component<any, State> {
 
                 this._interval(Infinity, 50, 'i3', () => {
                     const time = player.getCurrentTime();
-                    const delta = time - end;
+                    const track = this._getCurrentItem();
+                    const delta = time - track.time.end;
 
                     if (delta > -0.05 && delta < 0.1) {
                         this._clearI('i3');
@@ -292,7 +332,7 @@ export default class TrackParts extends Component<any, State> {
                             if (this.state.repeat) {
                                 this._timeout(1000, 'i3', () => {
                                     if (this.state.repeat) {
-                                        this._repeat(start, interval);
+                                        this._repeat(start);
                                     }
                                 });
                             }
@@ -405,7 +445,19 @@ export default class TrackParts extends Component<any, State> {
                 }
                 break;
             case 82: // r
-                this._onRepeatChange();
+                if (!e.ctrlKey && !e.altKey && !e.shiftKey) {
+                    this._onRepeatChange();
+                }
+                break;
+            case 27: // esc
+                this._clearI('i3');
+                this.setState({
+                    selected: null,
+                });
+                break;
+            case 192:
+                const style = (document.getElementById('root'): any).style;
+                style.display = style.display === 'none' ? 'block' : 'none';
                 break;
             default:
                 // fallback
@@ -468,6 +520,48 @@ export default class TrackParts extends Component<any, State> {
         });
     }
 
+    _getCurrentItem(): PartInfo {
+        const { items, selected } = this.state;
+
+        if (selected == null) {
+            throw new Error('INVALID_INDEX');
+        }
+
+        return items[selected];
+    }
+
+    _onTimeStartChange(e: any) {
+        const secs = timeMsToSeconds(e.target.value);
+
+        if (secs) {
+            const item = this._getCurrentItem();
+
+            item.time.start = secs;
+            this.forceUpdate();
+
+        } else {
+            this.setState({
+                invalidStartTime: true,
+            });
+        }
+    }
+
+    _onTimeEndChange(e: any) {
+        const secs = timeMsToSeconds(e.target.value);
+
+        if (secs) {
+            const item = this._getCurrentItem();
+
+            item.time.end = secs;
+            this.forceUpdate();
+
+        } else {
+            this.setState({
+                invalidEndTime: true,
+            });
+        }
+    }
+
 }
 
 function toTime(_seconds) {
@@ -483,5 +577,47 @@ function nn(val) {
         return '0' + v;
     } else {
         return v;
+    }
+}
+
+function nnn(val) {
+    const v = val.toString();
+
+    if (v.length === 1) {
+        return '00' + v;
+    } else if (v.length === 2) {
+        return '0' + v;
+    } else {
+        return v;
+    }
+}
+
+function toTimeMs(seconds) {
+    const ms       = Math.round(seconds * 1000);
+    const msString = nnn(ms % 1000);
+    const sec      = Math.floor(seconds);
+
+    return Math.floor(sec / 60) + ':' + nn(sec % 60) + '.' + msString;
+}
+
+function timeMsToSeconds(string: string): ?number {
+    const match = string.match(/^(\d+):(\d\d?)(?:\.(\d{1,3}))?$/);
+
+    if (match) {
+        const msS = match[3];
+        let ms = parseInt(msS, 10);
+
+        if (msS.length === 1) {
+            ms *= 100;
+        }
+
+        if (msS.length === 2) {
+            ms *= 10;
+        }
+
+        return parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + ms / 1000;
+
+    } else {
+        return null;
     }
 }

@@ -11,40 +11,44 @@
   }
 
   &:hover &__handler {
-    opacity: 1;
+    display: block;
   }
 
   &__part {
     position: absolute;
     top: 0;
     height: 20px;
-    background: #f00;
+    background: fade(#888, 50%);
+
+    &_active {
+      background: #f00;
+      z-index: 1;
+    }
+
+    &:hover {
+      outline: 1px solid blue;
+    }
   }
 
   &__handler {
     position: absolute;
-    top: -8px;
-    height: 28px;
-    width: 10px;
-    margin-left: -5px;
+    display: none;
+    top: -4px;
+    bottom: 0;
+    width: 4px;
+    background: #000;
     cursor: move;
-    opacity: 0;
-    transition: opacity 0.1s;
+    z-index: 3;
 
-    &:after {
-      content: '';
-      position: absolute;
-      top: 3px;
-      left: 3px;
-      bottom: 0;
-      width: 4px;
-      background: #000;
+    &_left {
+      left: 0;
     }
 
-    &:hover:after {
-      top: 2px;
-      left: 2px;
-      bottom: 0;
+    &_right {
+      right: 0;
+    }
+
+    &:hover {
       width: 6px;
       background: blue;
     }
@@ -65,5 +69,6 @@
     height: 20px;
     width: 1px;
     background: #fff;
+    z-index: 2;
   }
 }

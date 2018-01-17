@@ -1,15 +1,19 @@
 // @flow
 
-import React, { Component } from 'react';
 import _ from 'lodash';
+import cn from 'classnames';
+import React, { Component } from 'react';
 
 type Props = {|
-    range: ?{|
+    selected: ?number,
+    items: Array<{|
         start: number,
         end: number,
-    |},
+    |}>,
     time: number,
     duration: number,
+    onHover: Function,
+    onClick: Function,
 |}
 
 type State = {|
@@ -17,36 +21,65 @@ type State = {|
 
 export default class App extends Component<Props, State> {
 
+    _hover: ?number;
+
     constructor(props: any) {
         super(props);
+
+        this._hover = null;
 
         _.bindAll(this, [
         ]);
     }
 
     render() {
-        const { time, range, duration } = this.props;
+        const { selected, time, items, duration } = this.props;
 
-        let inner = null;
+        const container = [];
+        let key = 0;
 
-        if (range) {
-            const l = range.start * 100 / duration;
-            const w = range.end * 100 / duration - l;
+        if (duration) {
+            for (let i = 0; i < items.length; i++) {
+                const range = items[i];
+                const l = range.start * 100 / duration;
+                const w = range.end * 100 / duration - l;
 
-            inner = [
-                <div key="1" className="b-timeline__part" style={{
-                    left:  `${l}%`,
-                    width: `${w}%`,
-                }} />,
-                <div key="2" className="b-timeline__handler" style={{ left: `${l}%` }} />,
-                <div key="3" className="b-timeline__handler" style={{ left: `${l + w}%` }} />,
-            ];
+                const part = (
+                    <div key={++key} className={cn('b-timeline__part', {
+                        'b-timeline__part_active': i === selected,
+                    })} style={{
+                        left:  `${l}%`,
+                        width: `${w}%`,
+                    }}
+                         onMouseEnter={() => this._onMouseEnter(i)}
+                         onMouseLeave={() => this._onMouseLeave(i)}
+                         onClick={() => this._onClick(i)}
+                    >
+                        {i === selected ?
+                            <div className="b-timeline__handler b-timeline__handler_left" />
+                            : null
+                        }
+                        {i === selected ?
+                            <div className="b-timeline__handler b-timeline__handler_right" />
+                            : null
+                        }
+                    </div>
+                );
+
+                container.push(part);
+
+                if (i === selected) {
+                    container.push(
+
+                    );
+                }
+            }
         }
 
         return (
             <div className="b-timeline">
                 <div className="b-timeline__body" />
-                {inner}
+                {container}
                 <div className="b-timeline__position" style={{ left: `${duration ? time * 100 / duration : 0}%` }} />
                 <div className="b-timeline__times">
                     {!duration ? null : _.times(Math.floor(duration / 60) + 1, i => (
@@ -60,6 +93,22 @@ export default class App extends Component<Props, State> {
                 </div>
             </div>
         );
+    }
+
+    _onMouseEnter(i: number) {
+        this._hover = i;
+        this.props.onHover(i);
+    }
+
+    _onMouseLeave(i: number) {
+        if (this._hover === i) {
+            this._hover = null;
+            this.props.onHover(null);
+        }
+    }
+
+    _onClick(i: number) {
+        this.props.onClick(i);
     }
 
 }
