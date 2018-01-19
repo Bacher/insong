@@ -24,9 +24,6 @@ type State = {|
     hover: ?number,
     repeat: boolean,
     capture: boolean,
-
-    invalidStartTime: boolean,
-    invalidEndTime: boolean,
 |}
 
 export default class TrackParts extends Component<any, State> {
@@ -49,9 +46,6 @@ export default class TrackParts extends Component<any, State> {
             hover:    null,
             capture:  false,
             repeat:   store.get('repeat', false),
-
-            invalidStartTime: false,
-            invalidEndTime:   false,
         };
 
         _.bindAll(this, [
@@ -67,6 +61,7 @@ export default class TrackParts extends Component<any, State> {
             '_onClickRange',
             '_onTimeStartChange',
             '_onTimeEndChange',
+            '_onTitleChange',
         ]);
     }
 
@@ -108,13 +103,14 @@ export default class TrackParts extends Component<any, State> {
 
         return (
             <div className="b-track-parts">
+                Chunks:
                 <div className="b-track-parts__items">
                     {items.map((item, i) => (
                         <div key={i} className={cn('b-track-parts__item', {
                             'b-track-parts__item_active': i === selected,
                         })} data-id={i} onClick={this._onItemClick}>
                             {item.title} ({toTime(item.time.start)} - {toTime(item.time.end)})
-                            <i className="b-track-parts__item-remove" onClick={e => this._onRemoveItem(e, i)}>x</i>
+                            <i className="fa fa-times b-track-parts__item-remove" onClick={e => this._onRemoveItem(e, i)} />
                         </div>
                     ))}
                 </div>
@@ -145,7 +141,8 @@ export default class TrackParts extends Component<any, State> {
                 </div>
                 {track ?
                     <div className="b-track-parts__current-track">
-                        <div>{track.title}</div>
+                        Current chunk:
+                        <input className="b-track-parts__track-title" value={track.title} onChange={this._onTitleChange} />
                         <input className="b-track-parts__track-time" value={toTimeMs(track.time.start)} onChange={this._onTimeStartChange} />
                         {' - '}
                         <input className="b-track-parts__track-time" value={toTimeMs(track.time.end)} onChange={this._onTimeEndChange} />
@@ -185,7 +182,7 @@ export default class TrackParts extends Component<any, State> {
         });
 
         this._stopPlayerOperations();
-        this._repeat(item.time.start, Math.round((item.time.end - item.time.start) * 1000));
+        this._repeat(item.time.start);
     }
 
     _onRemoveItem(e: any, i: number) {
@@ -211,7 +208,7 @@ export default class TrackParts extends Component<any, State> {
             this.forceUpdate();
         }
 
-        store.set('parts', this.state.items);
+        this._saveItems();
     }
 
     _onRepeatChange() {
@@ -279,7 +276,7 @@ export default class TrackParts extends Component<any, State> {
             }
         });
 
-        store.set('parts', this.state.items);
+        this._saveItems();
 
         const newSel = this.state.items.length - 1;
 
@@ -303,12 +300,13 @@ export default class TrackParts extends Component<any, State> {
 
     _repeat(start: number) {
         const player = window.ppp;
+        player.setVolume(0);
         player.seekTo(start - 0.1);
         player.playVideo();
-        let prevTime = player.getCurrentTime();
+        let prevTime = Math.round(player.getCurrentTime() * 1000);
 
         this._interval(Infinity, 10, 'i3', (i, clear) => {
-            const currentTime = player.getCurrentTime();
+            const currentTime = Math.round(player.getCurrentTime() * 1000);
 
             if (prevTime === 0) {
                 prevTime = currentTime;
@@ -316,12 +314,15 @@ export default class TrackParts extends Component<any, State> {
             } else if (currentTime !== prevTime) {
                 clear();
 
+                this._interval(10, 50, 'i3', i => {
+                    player.setVolume(i * 10);
+                });
+
                 this._interval(Infinity, 50, 'i3', () => {
                     const time = player.getCurrentTime();
                     const track = this._getCurrentItem();
-                    const delta = time - track.time.end;
 
-                    if (delta > -0.05 && delta < 0.1) {
+                    if (time >= track.time.end) {
                         this._clearI('i3');
 
                         this._interval(10, 50, 'i3', i => {
@@ -338,10 +339,6 @@ export default class TrackParts extends Component<any, State> {
                             }
                         });
                     }
-                });
-
-                this._interval(10, 50, 'i3', i => {
-                    player.setVolume(i * 10);
                 });
             }
         });
@@ -551,15 +548,21 @@ export default class TrackParts extends Component<any, State> {
 
         if (secs) {
             const item = this._getCurrentItem();
-
             item.time.end = secs;
             this.forceUpdate();
-
-        } else {
-            this.setState({
-                invalidEndTime: true,
-            });
+            this._saveItems();
         }
+    }
+
+    _onTitleChange(e: any) {
+        const item = this._getCurrentItem();
+        item.title = e.target.value;
+        this.forceUpdate();
+        this._saveItems();
+    }
+
+    _saveItems() {
+        store.set('parts', this.state.items);
     }
 
 }
