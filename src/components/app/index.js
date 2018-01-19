@@ -2,57 +2,90 @@
 
 import React, { Component } from 'react';
 import _ from 'lodash';
-import Player from '../player';
-import TrackParts from '../track-parts';
-import { onLoad } from '../../youtube';
+import Item from '../item';
+import List from '../list';
 
-type State = {|
-    isYTLoaded: boolean,
+type Props = {|
 |}
 
-export default class App extends Component<any, State> {
+type RouteInfo = {|
+    route: 'string',
+    params: ?Object,
+|}
 
-    constructor(props: any) {
+export default class App extends Component<Props, RouteInfo> {
+
+    constructor(props: Props) {
         super(props);
 
-        this.state = {
-            isYTLoaded: false,
-        };
+        this.state = this._parseRoute();
 
         _.bindAll(this, [
-            '_onYoutubeLoaded',
+            '_onHashChange',
         ]);
     }
 
     componentDidMount() {
-        onLoad(this._onYoutubeLoaded);
+        window.addEventListener('hashchange', this._onHashChange);
     }
 
     render() {
-        const { isYTLoaded } = this.state;
+        const { route, params } = this.state;
 
-        if (isYTLoaded) {
-            return (
-                <div className="b-app">
-                    <div className="b-app__side">
-                        <TrackParts />
-                    </div>
-                    <div className="b-app__side">
-                        <Player />
-                    </div>
-                </div>
+        let body;
+
+        if (route === 'item') {
+            body = (
+                <Item params={params} />
+            );
+        } else if (route === 'index') {
+            body = (
+                <List params={params} />
             );
         } else {
-            return (
-                <div className="b-app" />
+            body = (
+                <div className="b-app">
+                    Bad route
+                </div>
             );
         }
+
+        return (
+            <div className="b-app">
+                {body}
+            </div>
+        );
     }
 
-    _onYoutubeLoaded() {
-        this.setState({
-            isYTLoaded: true,
-        });
+    _parseRoute(): RouteInfo {
+        const hash = window.location.hash;
+
+        if (!hash || hash === '#') {
+            return {
+                route:  'index',
+                params: null,
+            };
+        }
+
+        const itemMatch = hash.match(/^\d+#/);
+
+        if (itemMatch) {
+            return {
+                route: 'item',
+                params: {
+                    id: parseInt(itemMatch[1], 10),
+                },
+            }
+        }
+
+        return {
+            route: 'invalid',
+            params: null,
+        };
+    }
+
+    _onHashChange() {
+        this.setState(this._parseRoute());
     }
 
 }
