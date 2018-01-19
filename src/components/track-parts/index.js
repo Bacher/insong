@@ -6,6 +6,12 @@ import cn from 'classnames'
 import store from '../../storage';
 import TimeLine from '../timeline';
 
+import type { ItemData } from '../app';
+
+type Props = {|
+    item: ItemData,
+|}
+
 type TimeInterval = {|
     start: number,
     end: number,
@@ -26,7 +32,7 @@ type State = {|
     capture: boolean,
 |}
 
-export default class TrackParts extends Component<any, State> {
+export default class TrackParts extends Component<Props, State> {
 
     _i: Map<string,any>;
     _startCaptureTime: ?number;
@@ -97,12 +103,15 @@ export default class TrackParts extends Component<any, State> {
     }
 
     render() {
+        const { item } = this.props;
         const { time, duration, items, repeat, capture, selected } = this.state;
 
         const track = selected != null ? items[selected] : null;
 
         return (
             <div className="b-track-parts">
+                <a href="#"><i className="fa fa-angle-left" /> Back</a>
+                <div>Video id: <a href={`https://www.youtube.com/?v=${item.videoId}`}>YouTube ({item.videoId})</a></div>
                 Chunks:
                 <div className="b-track-parts__items">
                     {items.map((item, i) => (
@@ -535,11 +544,6 @@ export default class TrackParts extends Component<any, State> {
 
             item.time.start = secs;
             this.forceUpdate();
-
-        } else {
-            this.setState({
-                invalidStartTime: true,
-            });
         }
     }
 
@@ -562,7 +566,7 @@ export default class TrackParts extends Component<any, State> {
     }
 
     _saveItems() {
-        store.set('parts', this.state.items);
+        store.save();
     }
 
 }

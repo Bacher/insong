@@ -4,7 +4,7 @@ import React, { Component } from 'react';
 import _ from 'lodash';
 
 type Props = {|
-
+    videoId: string,
 |}
 
 type State = {|
@@ -22,7 +22,8 @@ const OPTIONS = {
 
 export default class Player extends Component<Props, State> {
 
-    _youtubePlayer: any;
+    _videoEl: any;
+    _player: any;
 
     constructor(props: Props) {
         super(props);
@@ -30,6 +31,13 @@ export default class Player extends Component<Props, State> {
         _.bindAll(this, [
             '_onPlayerRef',
         ]);
+    }
+
+    componentWillReceiveProps(props: Props) {
+        if (this.props.videoId !== props.videoId) {
+            this._destroyPlayer();
+            this._initPlayer(props.videoId);
+        }
     }
 
     render() {
@@ -42,27 +50,44 @@ export default class Player extends Component<Props, State> {
 
     _onPlayerRef(el: any) {
         if (el) {
-            window.ppp = this._youtubePlayer = new window.YT.Player(el, {
-                width:      '640',
-                height:     '360',
-                //videoId:    '253vLj037K4',
-                //videoId:    'NZc_emXplE4',
-                //videoId:    'BfwCYaVUCHM',
-                //videoId:    'bCDIt50hRDs',
-                videoId:    '-OBK8k_B3Lc',
-                events:     {
-                    'onReady':       event => {
-                        //event.target.playVideo();
-                    },
-                    'onStateChange': event => {
-                        //event.data === YT.PlayerState.PLAYING
-                        //youtubePlayer.stopVideo()
-                    },
-                },
-                playerVars: OPTIONS,
-            });
+            this._videoEl = el;
+            this._initPlayer();
+
         } else {
-            this._youtubePlayer.destroy();
+            this._destroyPlayer();
+            this._videoEl = null;
+        }
+    }
+
+    _initPlayer(videoId: string = this.props.videoId) {
+        this._player = new window.YT.Player(this._videoEl, {
+            width:      '640',
+            height:     '360',
+            //videoId:    '253vLj037K4',
+            //videoId:    'NZc_emXplE4',
+            //videoId:    'BfwCYaVUCHM',
+            //videoId:    'bCDIt50hRDs',
+            //videoId:    '-OBK8k_B3Lc',
+            videoId:    videoId,
+            events:     {
+                'onReady':       event => {
+                    //event.target.playVideo();
+                },
+                'onStateChange': event => {
+                    //event.data === YT.PlayerState.PLAYING
+                    //youtubePlayer.stopVideo()
+                },
+            },
+            playerVars: OPTIONS,
+        });
+
+        window.ppp = this._player;
+    }
+
+    _destroyPlayer() {
+        if (this._player) {
+            this._player.destroy();
+            this._player = null;
         }
     }
 

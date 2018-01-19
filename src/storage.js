@@ -47,6 +47,10 @@ class Storage {
         window.localStorage.setItem(KEY, json);
     }
 
+    save() {
+        this._save();
+    }
+
 }
 
 const instance = new Storage();

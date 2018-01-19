@@ -5,12 +5,26 @@ import _ from 'lodash';
 import Item from '../item';
 import List from '../list';
 
+export type ItemData = {|
+    id: number,
+    videoId: string,
+    parts: Array<Part>,
+|}
+
+export type Part = {|
+    title: string,
+    time: {|
+        start: number,
+        end: number,
+    |},
+|}
+
 type Props = {|
 |}
 
 type RouteInfo = {|
-    route: 'string',
-    params: ?Object,
+    route: string,
+    params: any,
 |}
 
 export default class App extends Component<Props, RouteInfo> {
@@ -36,7 +50,7 @@ export default class App extends Component<Props, RouteInfo> {
 
         if (route === 'item') {
             body = (
-                <Item params={params} />
+                <Item key={params.id} params={params} />
             );
         } else if (route === 'index') {
             body = (
@@ -63,11 +77,11 @@ export default class App extends Component<Props, RouteInfo> {
         if (!hash || hash === '#') {
             return {
                 route:  'index',
-                params: null,
+                params: {},
             };
         }
 
-        const itemMatch = hash.match(/^\d+#/);
+        const itemMatch = hash.match(/^#(\d+)$/);
 
         if (itemMatch) {
             return {
@@ -80,7 +94,7 @@ export default class App extends Component<Props, RouteInfo> {
 
         return {
             route: 'invalid',
-            params: null,
+            params: {},
         };
     }
 
