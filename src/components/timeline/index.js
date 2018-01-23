@@ -3,6 +3,7 @@
 import _ from 'lodash';
 import cn from 'classnames';
 import React, { Component } from 'react';
+import { toTime } from '../../utils/time';
 
 type Props = {|
     selected: ?number,
@@ -76,18 +77,32 @@ export default class App extends Component<Props, State> {
             }
         }
 
+        let interval = 0;
+
+        if (duration) {
+            if (duration > 2 * 60 * 60) {
+                interval = 30 * 60;
+            } else if (duration > 60 * 60) {
+                interval = 10 * 60;
+            } else if (duration > 30 * 60) {
+                interval = 5 * 60;
+            } else {
+                interval = 60;
+            }
+        }
+
         return (
             <div className="b-timeline">
                 <div className="b-timeline__body" />
                 {container}
                 <div className="b-timeline__position" style={{ left: `${duration ? time * 100 / duration : 0}%` }} />
                 <div className="b-timeline__times">
-                    {!duration ? null : _.times(Math.floor(duration / 60) + 1, i => (
+                    {!duration ? null : _.times(Math.floor(duration / interval) + 1, i => (
                         <div
                             key={i}
                             className="b-timeline__time"
-                            style={{ left: `${i * 60 * 100 / duration}%` }}>
-                            {i}:00
+                            style={{ left: `${i * interval * 100 / duration}%` }}>
+                            {toTime(i * interval)}
                         </div>
                     ))}
                 </div>

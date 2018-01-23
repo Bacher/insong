@@ -5,6 +5,7 @@ import _ from 'lodash';
 import cn from 'classnames'
 import store from '../../storage';
 import TimeLine from '../timeline';
+import { toTime, toTimeMs, timeMsToSeconds } from '../../utils/time';
 
 import type { ItemData } from '../app';
 
@@ -42,13 +43,11 @@ export default class TrackParts extends Component<Props, State> {
 
         this._i = new Map();
 
-        const items = store.get('parts') || [];
-
         this.state = {
             time:     0,
             duration: 0,
-            items:    items,
-            selected: items.length ? 0 : null,
+            items:    props.item.parts,
+            selected: props.item.parts.length ? 0 : null,
             hover:    null,
             capture:  false,
             repeat:   store.get('repeat', false),
@@ -112,7 +111,7 @@ export default class TrackParts extends Component<Props, State> {
             <div className="b-track-parts">
                 <a href="#"><i className="fa fa-angle-left" /> Back</a>
                 <div>Video id: <a href={`https://www.youtube.com/?v=${item.videoId}`}>YouTube ({item.videoId})</a></div>
-                Chunks:
+                Parts:
                 <div className="b-track-parts__items">
                     {items.map((item, i) => (
                         <div key={i} className={cn('b-track-parts__item', {
@@ -415,6 +414,10 @@ export default class TrackParts extends Component<Props, State> {
             return;
         }
 
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+            return;
+        }
+
         switch (e.which) {
             case 32: // space
                 //this._onStartCaptureClick();
@@ -571,60 +574,3 @@ export default class TrackParts extends Component<Props, State> {
 
 }
 
-function toTime(_seconds) {
-    const seconds = Math.round(_seconds);
-
-    return Math.floor(seconds / 60) + ':' + nn(seconds % 60);
-}
-
-function nn(val) {
-    const v = val.toString();
-
-    if (v.length === 1) {
-        return '0' + v;
-    } else {
-        return v;
-    }
-}
-
-function nnn(val) {
-    const v = val.toString();
-
-    if (v.length === 1) {
-        return '00' + v;
-    } else if (v.length === 2) {
-        return '0' + v;
-    } else {
-        return v;
-    }
-}
-
-function toTimeMs(seconds) {
-    const ms       = Math.round(seconds * 1000);
-    const msString = nnn(ms % 1000);
-    const sec      = Math.floor(seconds);
-
-    return Math.floor(sec / 60) + ':' + nn(sec % 60) + '.' + msString;
-}
-
-function timeMsToSeconds(string: string): ?number {
-    const match = string.match(/^(\d+):(\d\d?)(?:\.(\d{1,3}))?$/);
-
-    if (match) {
-        const msS = match[3];
-        let ms = parseInt(msS, 10);
-
-        if (msS.length === 1) {
-            ms *= 100;
-        }
-
-        if (msS.length === 2) {
-            ms *= 10;
-        }
-
-        return parseInt(match[1], 10) * 60 + parseInt(match[2], 10) + ms / 1000;
-
-    } else {
-        return null;
-    }
-}

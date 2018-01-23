@@ -62,7 +62,7 @@ export default class List extends Component<Props, State> {
 
         // https://www.youtube.com/watch?v=bCDIt50hRDs
 
-        const match = url.match(/^https:\/\/(?:www\.)?youtube.com\/watch\?v=([^\/]+)$/);
+        const match = url.match(/^https:\/\/(?:www\.)?youtube\.com\/watch\?v=([^\/]+)$/);
 
         const { items } = this.state;
 
