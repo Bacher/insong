@@ -5,6 +5,7 @@ import _ from 'lodash';
 import cn from 'classnames'
 import store from '../../storage';
 import TimeLine from '../timeline';
+import TimeInput from '../time-input';
 import { toTime, toTimeMs, timeMsToSeconds } from '../../utils/time';
 
 import type { ItemData } from '../app';
@@ -151,9 +152,10 @@ export default class TrackParts extends Component<Props, State> {
                     <div className="b-track-parts__current-track">
                         Current chunk:
                         <input className="b-track-parts__track-title" value={track.title} onChange={this._onTitleChange} />
-                        <input className="b-track-parts__track-time" value={toTimeMs(track.time.start)} onChange={this._onTimeStartChange} />
+
+                        <TimeInput value={track.time.start} onChange={this._onTimeStartChange} />
                         {' - '}
-                        <input className="b-track-parts__track-time" value={toTimeMs(track.time.end)} onChange={this._onTimeEndChange} />
+                        <TimeInput value={track.time.end} onChange={this._onTimeEndChange} />
                     </div>
                     : null
                 }
@@ -539,26 +541,18 @@ export default class TrackParts extends Component<Props, State> {
         return items[selected];
     }
 
-    _onTimeStartChange(e: any) {
-        const secs = timeMsToSeconds(e.target.value);
-
-        if (secs) {
-            const item = this._getCurrentItem();
-
-            item.time.start = secs;
-            this.forceUpdate();
-        }
+    _onTimeStartChange(value: number) {
+        const item = this._getCurrentItem();
+        item.time.start = value;
+        this.forceUpdate();
+        this._saveItems();
     }
 
-    _onTimeEndChange(e: any) {
-        const secs = timeMsToSeconds(e.target.value);
-
-        if (secs) {
-            const item = this._getCurrentItem();
-            item.time.end = secs;
-            this.forceUpdate();
-            this._saveItems();
-        }
+    _onTimeEndChange(value: number) {
+        const item = this._getCurrentItem();
+        item.time.end = value;
+        this.forceUpdate();
+        this._saveItems();
     }
 
     _onTitleChange(e: any) {
